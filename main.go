@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"gofire/tracker"
+	"gofire/ui"
 	"log"
 	"time"
-
-	"github.com/shirou/gopsutil/process"
 )
 
 func main() {
+
+	fmt.Println("hello world")
 
 	tracker := tracker.InitTracker()
 	err := tracker.LoadData("gametimes.json")
@@ -22,56 +23,35 @@ func main() {
 		"WoW.exe": true,
 	}
 
-	for {
-		processes, err := process.Processes()
-		if err != nil {
-			log.Fatalf("Error getting processes: %v", err)
+	fmt.Println("Creating window")
+	// Create and show the UI window
+	window := ui.CreateWindow("GoFire", 1280, 720)
+	go func() {
+
+		GetInitialState(window, tracker, knownGames)
+
+		// NOTE: Make sure we find the correct timer for the loop updates.
+		for range time.Tick(1 * time.Second) {
+			tracker.UpdateGameTimes(knownGames)
+			tracker.SaveData("gametimes.json")
+
+			// Update the label with the current game times
+			gameName := tracker.RunningGameName()
+
+			fmt.Println(gameName)
+
+			window.UpdateLabel(gameName)
 		}
+	}()
+	window.Show()
+}
 
-		// track the running processes
-		runningGames := make(map[string]bool)
+func GetInitialState(window *ui.Window, tracker *tracker.GameTimeTracker, knownGames map[string]bool) {
+	tracker.UpdateGameTimes(knownGames)
 
-		for _, proc := range processes {
-			name, err := proc.Name()
-			if err != nil {
-				continue
-			}
+	tracker.SaveData("gametimes.json")
 
-			if knownGames[name] {
+	gameName := tracker.RunningGameName()
+	window.UpdateLabel(gameName)
 
-				runningGames[name] = true
-
-				fmt.Print("detected game ", name)
-
-				if _, exists := tracker.StartTimes[name]; !exists {
-					// if game process did not first exist, then give it a start time
-					fmt.Println("process no recorded times, creating new entry...")
-					startTime, err := proc.CreateTime()
-					if err != nil {
-						continue
-					}
-
-					// Convert milliseconds to time.Time
-					unixStartTime := time.Unix(startTime/1000, 0)
-					tracker.StartTimes[name] = unixStartTime
-				} else {
-					tracker.GameTimes[name] += time.Minute
-				}
-			}
-		}
-
-		// remove games that have been closed down
-		for game := range tracker.StartTimes {
-			if !runningGames[game] {
-				delete(tracker.StartTimes, game)
-			}
-		}
-
-		// Save data every minute
-		time.Sleep(1 * time.Minute)
-		err = tracker.SaveData("gametimes.json")
-		if err != nil {
-			log.Fatalf("Error saving data: %v", err)
-		}
-	}
 }

@@ -3,8 +3,11 @@ package tracker
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
+
+	"github.com/shirou/gopsutil/process"
 )
 
 type GameTimeTracker struct {
@@ -63,4 +66,46 @@ func (gtt *GameTimeTracker) LoadData(filename string) error {
 	}
 
 	return nil
+}
+
+func (gtt *GameTimeTracker) UpdateGameTimes(knownGames map[string]bool) {
+
+	processes, err := process.Processes()
+	if err != nil {
+		log.Fatalf("error getting processes: %v", err)
+	}
+
+	runningGames := make(map[string]bool)
+	for _, prc := range processes {
+		name, err := prc.Name()
+		if err != nil {
+			continue
+		}
+
+		if knownGames[name] {
+			runningGames[name] = true
+
+			if _, exists := gtt.StartTimes[name]; !exists {
+				startTime, err := prc.CreateTime()
+				if err != nil {
+					continue
+				}
+
+				unixTime := time.Unix(startTime/1000, 0)
+				gtt.StartTimes[name] = unixTime
+			} else {
+				gtt.GameTimes[name] += time.Minute
+			}
+		}
+	}
+}
+
+func (gtt *GameTimeTracker) RunningGameName() string {
+	var result string
+
+	for game := range gtt.GameTimes {
+		result = fmt.Sprintf("Playing: %s\n", game)
+	}
+
+	return result
 }
