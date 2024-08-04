@@ -6,11 +6,13 @@ import (
 	"gofire/ui"
 	"log"
 	"time"
+
+	"fyne.io/fyne/v2/app"
 )
 
 func main() {
 
-	fmt.Println("hello world")
+	a := app.New()
 
 	tracker := tracker.InitTracker()
 	err := tracker.LoadData("gametimes.json")
@@ -25,7 +27,8 @@ func main() {
 
 	fmt.Println("Creating window")
 	// Create and show the UI window
-	window := ui.CreateWindow("GoFire", 1280, 720)
+	window := ui.CreateWindow(a, "GoFire", 1280, 720)
+
 	go func() {
 
 		GetInitialState(window, tracker, knownGames)
@@ -43,7 +46,10 @@ func main() {
 			window.UpdateLabel(gameName)
 		}
 	}()
+	ui.OpenChatWindow(a, "chat with Mikkurogue")
+
 	window.Show()
+
 }
 
 func GetInitialState(window *ui.Window, tracker *tracker.GameTimeTracker, knownGames map[string]bool) {

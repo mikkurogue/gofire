@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
@@ -18,16 +17,15 @@ type Window struct {
 }
 
 // CreateWindow initializes and returns a new Window instance
-func CreateWindow(title string, width, height int32) *Window {
-	a := app.New()
-	w := a.NewWindow(title)
+func CreateWindow(app fyne.App, title string, width, height int32) *Window {
+	w := app.NewWindow(title)
 	w.Resize(fyne.NewSize(float32(width), float32(height)))
 
 	window := &Window{
 		Title:  title,
 		Size:   [2]int32{width, height},
 		window: w,
-		app:    a,
+		app:    app,
 		label:  widget.NewLabel("Initializing..."),
 	}
 
